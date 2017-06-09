@@ -1,4 +1,4 @@
-# LevelGen
+# Ocean Level Generator
 
 A tool for Unity to generate levels in the form of Mazes, Caves and Dungeon. Please note that this project is stil a WIP 
 
@@ -30,7 +30,7 @@ Along the toolbar in Unity, click 'Window' then 'Level Generator'. A window with
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](https://github.com/kp16/Ocean/LICENSE.md) file for details
+This project is licensed under the MIT License - see the [LICENSE.md](https://github.com/kp16/Ocean/blob/master/LICENSE) file for details
 
 ## Acknowledgments
 
