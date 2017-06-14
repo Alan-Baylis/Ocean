@@ -6,25 +6,31 @@ using System.Collections.Generic;
 public enum OPTIONS
 {
     Hauberk,
+    Cave,
     TEST
 }
 
-public class Settings : EditorWindow
+public class Main : EditorWindow
 {
     private Vector2 scrollPos;
     private Vector2 mapSize;
+    public OPTIONS op;
+    private string seed;
 
     private Transform tilePrefab;
     private string objectName = "map001";
-    bool rooms = true;
+    private bool rooms = true;
+
+    private int randomFillPercent = 0;
+    private int width;
+    private int height;
+    private bool useRandomSeed;
 
     private string debugPhrase;
 
-    public OPTIONS op;
-
-    [MenuItem("Window/Level Generator")]
+    [MenuItem("Window/Ocean Level Generator")]
     public static void ShowWindow(){
-        EditorWindow.GetWindow(typeof(Settings));
+        EditorWindow.GetWindow(typeof(Main));
     }
 
     void OnGUI()
@@ -33,6 +39,13 @@ public class Settings : EditorWindow
         objectName = EditorGUILayout.TextField("Object Name: ", objectName);
         op = (OPTIONS)EditorGUILayout.EnumPopup("Map style:", op);
         DoGUI(op);
+        useRandomSeed = EditorGUILayout.Toggle("Use random seed", useRandomSeed);
+
+
+        EditorGUI.BeginDisabledGroup(useRandomSeed);
+        seed = EditorGUILayout.TextField("Seed: ", seed);
+        EditorGUI.EndDisabledGroup();
+    
         if (GUILayout.Button("Generate"))
         {
             generate(op);
@@ -43,10 +56,16 @@ public class Settings : EditorWindow
     {
         if (op == OPTIONS.Hauberk)
         {
-            GUILayout.Label("Hauberk Map Settings", EditorStyles.boldLabel);
+            GUILayout.Label("Hauberk Map Generation Settings", EditorStyles.boldLabel);
             mapSize = EditorGUILayout.Vector2Field("Size:", mapSize);
             tilePrefab = EditorGUILayout.ObjectField("Quad Wall Prefab", tilePrefab, typeof(Transform), true) as Transform;
             rooms = EditorGUILayout.Toggle("Add rooms", rooms);
+        }
+        if (op == OPTIONS.Cave)
+        {
+            GUILayout.Label("Cave Generation Settings", EditorStyles.boldLabel);
+            width = EditorGUILayout.IntField("Width:", width);
+            height = EditorGUILayout.IntField("Height:", height);
         }
         if (op == OPTIONS.TEST) {
             GUILayout.Label("Test stuff", EditorStyles.boldLabel);
@@ -62,12 +81,22 @@ public class Settings : EditorWindow
         }
         else
         {
+            if (useRandomSeed)
+            {
+                seed = Time.time.ToString();
+            }
             switch (op)
             {
                 case OPTIONS.Hauberk:
-                    LevelGenerator mg = new LevelGenerator();
+                    Hauberk mg = new Hauberk();
                     mg.addRooms(rooms);
+                    mg.setSeed(seed);
                     mg.GenerateHauberkMap(mapSize, objectName, tilePrefab);
+                    break;
+                case OPTIONS.Cave:
+                    Cave c = new Cave();
+                    c.setSeed(seed);
+                    c.GenerateCave(objectName, randomFillPercent, width, height);
                     break;
                 case OPTIONS.TEST:
                     Debug.Log("Testing...");

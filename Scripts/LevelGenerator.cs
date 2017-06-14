@@ -2,29 +2,43 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
+using System;
 
 public class LevelGenerator : MonoBehaviour {
+
+    protected string seed; // CAVE
+    protected bool SeedRandom;
+
+    // PROGRESS BAR STUFF
+    protected float currProgress;
+    protected float totalProgress;
+    protected float onePc;
+
+    public void setSeedRandom(bool _s)
+    {
+        SeedRandom = _s;
+    }
+
+    public void setSeed(string _s)
+    {
+        seed = _s;
+    }
+
+}
+
+public class Hauberk : LevelGenerator
+{
 
     private List<Room> _rooms; //list of placed rooms
     private List<Coord> allTileCoords;
     private bool cancel;
 
     private bool rooms;
-
-    // PROGRESS BAR STUFF
-    private float currProgress;
-    private float totalProgress;
-    private float onePc;
-
     private int _currentRegion = -1;
 
-    public int seed;
     public Transform tilePrefab;
     public Vector2 mapSize;
 
-    /*[Range(0,1)]
-    public float outlinePercentage;*/
-	
     public void GenerateHauberkMap(Vector2 mSize, string mapName, Transform quadPrefab)
     {
         currProgress = 0;
@@ -32,25 +46,24 @@ public class LevelGenerator : MonoBehaviour {
         totalProgress = mapSize.x * mapSize.y * 2;
         onePc = totalProgress / 100;
 
-        System.Random rnd = new System.Random();
+        System.Random rnd = new System.Random(seed.GetHashCode());
         tilePrefab = quadPrefab;
 
-        int seed = rnd.Next(0,1000000);
-
         // SORTS OUT WHERE TO PLACE THE WALLS
-        allTileCoords = new List<Coord> ();
-        for (int x = 0; x < mapSize.x; x++) {
-            for (int y = 0; y < mapSize.y; y++) {
+        allTileCoords = new List<Coord>();
+        for (int x = 0; x < mapSize.x; x++)
+        {
+            for (int y = 0; y < mapSize.y; y++)
+            {
                 if (cancel)
                 {
                     EditorUtility.ClearProgressBar();
                     allTileCoords = new List<Coord>();
                     break;
                 }
-                allTileCoords.Add (new Coord(x,y));
+                allTileCoords.Add(new Coord(x, y));
                 currProgress += onePc;
-                cancel = EditorUtility.DisplayCancelableProgressBar("Creating Map", "Defining where quads are placed " + (currProgress / totalProgress )*100, currProgress /totalProgress);
-                Debug.Log((currProgress / totalProgress)*100);
+                cancel = EditorUtility.DisplayCancelableProgressBar("Creating Map", "Defining where quads are placed " + (currProgress / totalProgress) * 100, currProgress / totalProgress);
             }
         }
 
@@ -62,11 +75,13 @@ public class LevelGenerator : MonoBehaviour {
         // DRAWS THE MAP TO THE SCENE
         Transform map = new GameObject(mapName).transform;
 
-        Transform mapHolder = new GameObject ("Generated Map").transform;
+        Transform mapHolder = new GameObject("Generated Map").transform;
         mapHolder.parent = map;
-		for (int x = 0; x < mapSize.x; x++) {
-            
-            for (int y = 0; y < mapSize.y; y++) {
+        for (int x = 0; x < mapSize.x; x++)
+        {
+
+            for (int y = 0; y < mapSize.y; y++)
+            {
                 if (cancel)
                 {
                     EditorUtility.ClearProgressBar();
@@ -74,23 +89,24 @@ public class LevelGenerator : MonoBehaviour {
                     break;
                 }
 
-                if (!coordExists(allTileCoords,x,y)) {
-                    Debug.Log("-- Skipped " + x + " " + y);
+                if (!coordExists(allTileCoords, x, y))
+                {
                     continue;
                 }
                 Vector3 tilePosition = coordToPosition(x, y);
-                Debug.Log("Created " + x + " " + y);
                 Transform newTile = Instantiate(tilePrefab, tilePosition, Quaternion.Euler(Vector3.right * 90)) as Transform;
-                //newTile.localScale = Vector3.one * (1 - outlinePercentage);
+                
                 newTile.name = x + " " + y;
                 newTile.parent = mapHolder;
                 currProgress += onePc;
                 cancel = EditorUtility.DisplayCancelableProgressBar("Adding to scene", "Adding your quad prefabs to the current screen " + (currProgress / totalProgress), currProgress / totalProgress);
-                Debug.Log((currProgress / totalProgress) * 100);
             }
-		}
+        }
 
+        HauberkEditor h = GameObject.Find(map.name).AddComponent<HauberkEditor>();
+        h.setDefaults(mapSize.x, mapSize.y, tilePrefab, SeedRandom);
         EditorUtility.ClearProgressBar();
+
     }
 
     public void addRooms(bool b)
@@ -105,16 +121,17 @@ public class LevelGenerator : MonoBehaviour {
         int numRoomTries = 3;
         for (var i = 0; i < numRoomTries; i++)
         {
-            /*if (cancel)
+            if (cancel)
             {
                 EditorUtility.ClearProgressBar();
                 alTileCoords = new List<Coord>();
                 break;
-            }*/
+            }
             Coord rndc = new Coord(rnd.Next(1, (int)mapSize.x), rnd.Next(1, (int)mapSize.y));
             Room room = new Room(rndc, rnd.Next(2, (int)mapSize.y), rnd.Next(2, (int)mapSize.x));
             var overlaps = false;
-            if (_rooms.Count > 0) {
+            if (_rooms.Count > 0)
+            {
                 foreach (Room other in _rooms)
                 {
                     if (room.distanceTo(other) <= 0)
@@ -129,7 +146,7 @@ public class LevelGenerator : MonoBehaviour {
                 // SKIPS ITERATION IF THERE'S AN OVERLAP
                 continue;
             }
-            
+
             // REMOVES COORDS SO SOME WALLS ARENT CREATED IN THE SCENE
             for (int x = 0; x < mapSize.x; x++)
             {
@@ -141,8 +158,7 @@ public class LevelGenerator : MonoBehaviour {
                         alTileCoords.Remove(toRemove);
                     }
                 }
-                
-               
+
             }
 
             _rooms.Add(room);
@@ -162,13 +178,45 @@ public class LevelGenerator : MonoBehaviour {
             {
                 return true;
             }
-            
+
         }
         return false;
     }
 
-    Vector3 coordToPosition(int x, int y){
-        return new Vector3 (-mapSize.x / 2 + 0.5f + x, 0, -mapSize.y / 2 + 0.5f + y);
+    Vector3 coordToPosition(int x, int y)
+    {
+        return new Vector3(-mapSize.x / 2 + 0.5f + x, 0, -mapSize.y / 2 + 0.5f + y);
+    }
+}
+
+public class Cave : LevelGenerator
+{
+    private int width, height;
+    private int[,] map;
+
+    public void GenerateCave(string mapName, int randomFillPercent, int width, int height)
+    {
+        // 0 = empty, 1 occupied by wall
+        map = new int[width, height];
+
+        System.Random pseudoRandom = new System.Random(seed.GetHashCode());
+        print(seed.GetHashCode());
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                map[x, y] = (pseudoRandom.Next(0, 100) < randomFillPercent) ? 1 : 0;
+            }
+        }
+
+        // DRAWING MAP
+        Transform level = new GameObject(mapName).transform;
+
+        Transform mapHolder = new GameObject("Generated Level").transform;
+        mapHolder.parent = level;
+        
+        CaveEditor r = GameObject.Find(level.name).AddComponent<CaveEditor>();
+        r.setDefaults(width,height,map, SeedRandom);
     }
 
 }
@@ -185,76 +233,4 @@ public struct Coord
     }
 }
 
-public class Room
-{
-    private Coord c;
-    private int h, w;
-    private List<Coord> allTileCoords = new List<Coord>();
 
-    public Room()
-    {
-        c = new Coord(1,1);
-        h = 3;
-        w = 3;
-        setTileCoords();
-    }
-
-    public Room(Coord _c, int _h, int _w)
-    {
-        c = _c;
-        h = _h;
-        w = _w;
-        setTileCoords();
-    }
-
-    private void setTileCoords()
-    {
-        for (int x = c.x; x < w; x++)
-        {
-            for (int y = c.y; y < h; y++)
-            {
-                allTileCoords.Add(new Coord(x, y));
-            }
-        }
-    }
-
-    public List<Coord> getRoomTiles()
-    {
-        return allTileCoords;
-    }
-
-    public Coord getCoordAt(int x, int y)
-    {
-        for (int i = 0; i < allTileCoords.Count; i++)
-        {
-            if(allTileCoords[i].x == x & allTileCoords[i].y == y) {
-                return allTileCoords[i];
-            }  
-        }
-        return new Coord(-99,-99);
-    }
-
-    public int distanceTo(Room r)
-    {
-        int dx = this.c.x - r.c.x;
-        int dy = this.c.y - r.c.y;
-        float result = Mathf.Sqrt(dy * dy + dx * dx);
-        //float result = Mathf.Abs(Mathf.Sqrt(dy * dy + dx * dx));
-        return (int) result;
-    }
-
-    public bool coordExists(int _x, int _y)
-    {
-        for (int x = c.x; x < w; x++)
-        {
-            for (int y = c.y; y < h; y++)
-            {
-                if (x == _x && y == _y)
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-}
