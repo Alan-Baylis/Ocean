@@ -81,22 +81,25 @@ public class Main : EditorWindow
         }
         else
         {
+			Transform level = new GameObject(objectName).transform;
             if (useRandomSeed)
             {
                 seed = Time.time.ToString();
             }
-            switch (op)
-            {
-                case OPTIONS.Hauberk:
-                    Hauberk mg = new Hauberk();
-                    mg.addRooms(rooms);
-                    mg.setSeed(seed);
-                    mg.GenerateHauberkMap(mapSize, objectName, tilePrefab);
+			System.Random rnd = new System.Random (seed.GetHashCode());
+            switch (op){
+				case OPTIONS.Hauberk:
+					Hauberk h = GameObject.Find (objectName).AddComponent<Hauberk> ();
+					h.addRooms (rooms);
+					h.setSeed (rnd);
+					h.setRandomSeed (useRandomSeed);
+					h.GenerateLevel(mapSize, level, tilePrefab);
                     break;
                 case OPTIONS.Cave:
                     Cave c = new Cave();
-                    c.setSeed(seed);
-                    c.GenerateCave(objectName, randomFillPercent, width, height);
+                    c.setSeed(rnd);
+					c.setRandomSeed (useRandomSeed);
+                    c.GenerateLevel(level, randomFillPercent, width, height);
                     break;
                 case OPTIONS.TEST:
                     Debug.Log("Testing...");

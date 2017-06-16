@@ -6,48 +6,108 @@ using System;
 
 public class LevelGenerator : MonoBehaviour {
 
-    protected string seed; // CAVE
-    protected bool SeedRandom;
+    protected bool isSeedRandom = false;
+	protected Transform root;
+	protected string seed;
+	protected System.Random rnd; 
 
     // PROGRESS BAR STUFF
     protected float currProgress;
     protected float totalProgress;
     protected float onePc;
 
-    public void setSeedRandom(bool _s)
+	public void setRandomSeed(bool _s)
     {
-        SeedRandom = _s;
+		isSeedRandom = _s;
     }
 
-    public void setSeed(string _s)
+	public void setSeed(System.Random _rng)
     {
-        seed = _s;
+		rnd = _rng;
     }
 
 }
 
 public class Hauberk : LevelGenerator
 {
-
     private List<Room> _rooms; //list of placed rooms
     private List<Coord> allTileCoords;
+	private List<Coord> savedTileCords; // for editor
     private bool cancel;
 
     private bool rooms;
     private int _currentRegion = -1;
 
+	private Transform root;
     public Transform tilePrefab;
     public Vector2 mapSize;
 
-    public void GenerateHauberkMap(Vector2 mSize, string mapName, Transform quadPrefab)
+	[Range(0,1)]
+	public float outlinePercentage = 0;
+
+	public bool useRandomSeed;
+
+	public void setDefaults(float w, float h, Transform ob, bool u)
+	{
+		mapSize.x = w;
+		mapSize.y = h;
+		tilePrefab = ob;
+		useRandomSeed = u;
+	}
+
+	public void GenerateLevel (){ // FOR EDITOR USAGE
+
+		foreach(Transform child in root){
+			GameObject.DestroyImmediate (child.gameObject);
+		}
+
+		// SORTS OUT WHERE TO PLACE THE WALLS
+		allTileCoords = new List<Coord>();
+		for (int x = 0; x < mapSize.x; x++)
+		{
+			for (int y = 0; y < mapSize.y; y++) {
+				allTileCoords.Add (new Coord (x, y));
+			}
+		}
+
+		if (rooms)
+		{
+			allTileCoords = savedTileCords;
+		}
+
+		// DRAWS THE MAP TO THE SCENE
+
+		Transform mapHolder = new GameObject("Generated Map").transform;
+		mapHolder.parent = root;
+
+		for (int x = 0; x < mapSize.x; x++)
+		{
+
+			for (int y = 0; y < mapSize.y; y++)
+			{
+				if (!coordExists(allTileCoords, x, y))
+				{
+					continue;
+				}
+				Vector3 tilePosition = coordToPosition(x, y);
+				Transform newTile = Instantiate(tilePrefab, tilePosition, Quaternion.Euler(Vector3.right * 90)) as Transform;
+				newTile.localScale = Vector3.one * (1 - outlinePercentage);
+				newTile.name = x + "_" + y;
+				newTile.parent = mapHolder;
+			}
+		}
+	}
+
+	public void GenerateLevel(Vector2 mSize, Transform map, Transform quadPrefab)
     {
+		// SETTING UP PROGRESSBAR STUFF
         currProgress = 0;
-        mapSize = mSize;
         totalProgress = mapSize.x * mapSize.y * 2;
         onePc = totalProgress / 100;
-
-        System.Random rnd = new System.Random(seed.GetHashCode());
-        tilePrefab = quadPrefab;
+        
+		mapSize = mSize;
+		tilePrefab = quadPrefab;
+		root = map;
 
         // SORTS OUT WHERE TO PLACE THE WALLS
         allTileCoords = new List<Coord>();
@@ -70,10 +130,10 @@ public class Hauberk : LevelGenerator
         if (rooms)
         {
             allTileCoords = addRooms(allTileCoords);
+			savedTileCords = allTileCoords;
         }
 
         // DRAWS THE MAP TO THE SCENE
-        Transform map = new GameObject(mapName).transform;
 
         Transform mapHolder = new GameObject("Generated Map").transform;
         mapHolder.parent = map;
@@ -95,16 +155,14 @@ public class Hauberk : LevelGenerator
                 }
                 Vector3 tilePosition = coordToPosition(x, y);
                 Transform newTile = Instantiate(tilePrefab, tilePosition, Quaternion.Euler(Vector3.right * 90)) as Transform;
-                
-                newTile.name = x + " " + y;
+				newTile.localScale = Vector3.one * (1 - outlinePercentage);
+                newTile.name = x + "_" + y;
                 newTile.parent = mapHolder;
                 currProgress += onePc;
                 cancel = EditorUtility.DisplayCancelableProgressBar("Adding to scene", "Adding your quad prefabs to the current screen " + (currProgress / totalProgress), currProgress / totalProgress);
             }
         }
 
-        HauberkEditor h = GameObject.Find(map.name).AddComponent<HauberkEditor>();
-        h.setDefaults(mapSize.x, mapSize.y, tilePrefab, SeedRandom);
         EditorUtility.ClearProgressBar();
 
     }
@@ -116,7 +174,6 @@ public class Hauberk : LevelGenerator
 
     public List<Coord> addRooms(List<Coord> alTileCoords)
     {
-        System.Random rnd = new System.Random();
         _rooms = new List<Room>();
         int numRoomTries = 3;
         for (var i = 0; i < numRoomTries; i++)
@@ -194,30 +251,50 @@ public class Cave : LevelGenerator
     private int width, height;
     private int[,] map;
 
-    public void GenerateCave(string mapName, int randomFillPercent, int width, int height)
+	[Range(0, 100)]
+	public int randomFillPercent;
+
+	public void GenerateLevel(Transform root, int randomFillPercent, int width, int height)
     {
-        // 0 = empty, 1 occupied by wall
+		// SETTING UP PROGRESSBAR STUFF
+		currProgress = 0;
+		totalProgress = height * width;
+		onePc = totalProgress / 100;
+
+		// 0 = empty, 1 occupied by wall
         map = new int[width, height];
 
-        System.Random pseudoRandom = new System.Random(seed.GetHashCode());
-        print(seed.GetHashCode());
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                map[x, y] = (pseudoRandom.Next(0, 100) < randomFillPercent) ? 1 : 0;
+                map[x, y] = (rnd.Next(0, 100) < randomFillPercent) ? 1 : 0;
             }
         }
 
         // DRAWING MAP
-        Transform level = new GameObject(mapName).transform;
-
         Transform mapHolder = new GameObject("Generated Level").transform;
-        mapHolder.parent = level;
+        mapHolder.parent = root;
+
+		// imcomplete
         
-        CaveEditor r = GameObject.Find(level.name).AddComponent<CaveEditor>();
-        r.setDefaults(width,height,map, SeedRandom);
     }
+
+	void OnDrawGizmos()
+	{
+		if (map != null)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				for (int y = 0; y < height; y++)
+				{
+					Gizmos.color = (map[x,y] == 1) ? Color.black : Color.white;
+					Vector2 pos = new Vector3(-width / 2 + x + 0.5f, 0, -height / 2 + y + 0.5f);
+					Gizmos.DrawCube(pos, Vector3.one);
+				}
+			}
+		}
+	}
 
 }
 
@@ -232,5 +309,3 @@ public struct Coord
         y = _y;
     }
 }
-
-
