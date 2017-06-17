@@ -16,7 +16,7 @@ public class LevelGenerator : MonoBehaviour {
     protected float totalProgress;
     protected float onePc;
 
-	public void setRandomSeed(bool _s)
+	public void setIsRandomSeed(bool _s)
     {
 		isSeedRandom = _s;
     }
@@ -30,75 +30,20 @@ public class LevelGenerator : MonoBehaviour {
 
 public class Hauberk : LevelGenerator
 {
-    private List<Room> _rooms; //list of placed rooms
+    private List<Room> _rooms; // list of placed rooms
     private List<Coord> allTileCoords;
 	private List<Coord> savedTileCords; // for editor
     private bool cancel;
 
     private bool rooms;
-    private int _currentRegion = -1;
-
-	private Transform root;
     public Transform tilePrefab;
     public Vector2 mapSize;
 
 	[Range(0,1)]
 	public float outlinePercentage = 0;
-
 	public bool useRandomSeed;
 
-	public void setDefaults(float w, float h, Transform ob, bool u)
-	{
-		mapSize.x = w;
-		mapSize.y = h;
-		tilePrefab = ob;
-		useRandomSeed = u;
-	}
-
-	public void GenerateLevel (){ // FOR EDITOR USAGE
-
-		foreach(Transform child in root){
-			GameObject.DestroyImmediate (child.gameObject);
-		}
-
-		// SORTS OUT WHERE TO PLACE THE WALLS
-		allTileCoords = new List<Coord>();
-		for (int x = 0; x < mapSize.x; x++)
-		{
-			for (int y = 0; y < mapSize.y; y++) {
-				allTileCoords.Add (new Coord (x, y));
-			}
-		}
-
-		if (rooms)
-		{
-			allTileCoords = savedTileCords;
-		}
-
-		// DRAWS THE MAP TO THE SCENE
-
-		Transform mapHolder = new GameObject("Generated Map").transform;
-		mapHolder.parent = root;
-
-		for (int x = 0; x < mapSize.x; x++)
-		{
-
-			for (int y = 0; y < mapSize.y; y++)
-			{
-				if (!coordExists(allTileCoords, x, y))
-				{
-					continue;
-				}
-				Vector3 tilePosition = coordToPosition(x, y);
-				Transform newTile = Instantiate(tilePrefab, tilePosition, Quaternion.Euler(Vector3.right * 90)) as Transform;
-				newTile.localScale = Vector3.one * (1 - outlinePercentage);
-				newTile.name = x + "_" + y;
-				newTile.parent = mapHolder;
-			}
-		}
-	}
-
-	public void GenerateLevel(Vector2 mSize, Transform map, Transform quadPrefab)
+	public void GenerateLevel(Vector2 mSize, Transform map, Transform quadPrefab, float _op)
     {
 		// SETTING UP PROGRESSBAR STUFF
         currProgress = 0;
@@ -107,6 +52,7 @@ public class Hauberk : LevelGenerator
         
 		mapSize = mSize;
 		tilePrefab = quadPrefab;
+		outlinePercentage = _op;
 		root = map;
 
         // SORTS OUT WHERE TO PLACE THE WALLS
@@ -166,6 +112,50 @@ public class Hauberk : LevelGenerator
         EditorUtility.ClearProgressBar();
 
     }
+
+
+	public void GenerateLevel (){ // FOR EDITOR USAGE
+
+		foreach(Transform child in root){
+			GameObject.DestroyImmediate (child.gameObject);
+		}
+
+		// SORTS OUT WHERE TO PLACE THE WALLS
+		allTileCoords = new List<Coord>();
+		for (int x = 0; x < mapSize.x; x++)
+		{
+			for (int y = 0; y < mapSize.y; y++) {
+				allTileCoords.Add (new Coord (x, y));
+			}
+		}
+
+		if (rooms)
+		{
+			allTileCoords = savedTileCords;
+		}
+
+		// DRAWS THE MAP TO THE SCENE
+
+		Transform mapHolder = new GameObject("Generated Map").transform;
+		mapHolder.parent = root;
+
+		for (int x = 0; x < mapSize.x; x++)
+		{
+
+			for (int y = 0; y < mapSize.y; y++)
+			{
+				if (!coordExists(allTileCoords, x, y))
+				{
+					continue;
+				}
+				Vector3 tilePosition = coordToPosition(x, y);
+				Transform newTile = Instantiate(tilePrefab, tilePosition, Quaternion.Euler(Vector3.right * 90)) as Transform;
+				newTile.localScale = Vector3.one * (1 - outlinePercentage);
+				newTile.name = x + "_" + y;
+				newTile.parent = mapHolder;
+			}
+		}
+	}
 
     public void addRooms(bool b)
     {
@@ -248,21 +238,24 @@ public class Hauberk : LevelGenerator
 
 public class Cave : LevelGenerator
 {
-    private int width, height;
-    private int[,] map;
+    public int width, height;
+    int[,] map;
 
 	[Range(0, 100)]
 	public int randomFillPercent;
 
-	public void GenerateLevel(Transform root, int randomFillPercent, int width, int height)
+	public void GenerateLevel(Transform root, int _rfpc, int _w, int _h)
     {
 		// SETTING UP PROGRESSBAR STUFF
 		currProgress = 0;
 		totalProgress = height * width;
 		onePc = totalProgress / 100;
 
-		// 0 = empty, 1 occupied by wall
-        map = new int[width, height];
+		randomFillPercent = _rfpc;
+		width = _w;
+		height = _h;
+
+		map = new int[width, height]; // 0 = empty, 1 occupied by wall
 
         for (int x = 0; x < width; x++)
         {
@@ -280,17 +273,27 @@ public class Cave : LevelGenerator
         
     }
 
+	public void GenerateLevel (){ // FOR EDITOR USAGE
+
+		map = new int[width, height];
+
+		for (int x = 0; x < width; x++)
+		{
+			for (int y = 0; y < height; y++)
+			{
+				map[x, y] = (rnd.Next(0, 100) < randomFillPercent) ? 1 : 0;
+			}
+		}
+	}
+
 	void OnDrawGizmos()
 	{
-		if (map != null)
-		{
-			for (int x = 0; x < width; x++)
-			{
-				for (int y = 0; y < height; y++)
-				{
-					Gizmos.color = (map[x,y] == 1) ? Color.black : Color.white;
-					Vector2 pos = new Vector3(-width / 2 + x + 0.5f, 0, -height / 2 + y + 0.5f);
-					Gizmos.DrawCube(pos, Vector3.one);
+		if (map != null) {
+			for (int x = 0; x < width; x++) {
+				for (int y = 0; y < height; y++) {
+					Gizmos.color = (map [x, y] == 1) ? Color.black : Color.white;
+					Vector3 pos = new Vector3(-width/2 + x+ .5f,0,-height/2 +y+.5f);
+					Gizmos.DrawCube (pos, Vector3.one);
 				}
 			}
 		}

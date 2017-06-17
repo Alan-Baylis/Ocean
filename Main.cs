@@ -20,11 +20,12 @@ public class Main : EditorWindow
     private Transform tilePrefab;
     private string objectName = "map001";
     private bool rooms = true;
+	private float outlinePercent;
 
-    private int randomFillPercent = 0;
+    private int randomFillPercent;
     private int width;
     private int height;
-    private bool useRandomSeed;
+    private bool useRandomSeed = false;
 
     private string debugPhrase;
 
@@ -40,8 +41,6 @@ public class Main : EditorWindow
         op = (OPTIONS)EditorGUILayout.EnumPopup("Map style:", op);
         DoGUI(op);
         useRandomSeed = EditorGUILayout.Toggle("Use random seed", useRandomSeed);
-
-
         EditorGUI.BeginDisabledGroup(useRandomSeed);
         seed = EditorGUILayout.TextField("Seed: ", seed);
         EditorGUI.EndDisabledGroup();
@@ -60,12 +59,14 @@ public class Main : EditorWindow
             mapSize = EditorGUILayout.Vector2Field("Size:", mapSize);
             tilePrefab = EditorGUILayout.ObjectField("Quad Wall Prefab", tilePrefab, typeof(Transform), true) as Transform;
             rooms = EditorGUILayout.Toggle("Add rooms", rooms);
+			outlinePercent = EditorGUILayout.Slider("Outline Percent:",outlinePercent,0,1);
         }
         if (op == OPTIONS.Cave)
         {
             GUILayout.Label("Cave Generation Settings", EditorStyles.boldLabel);
             width = EditorGUILayout.IntField("Width:", width);
             height = EditorGUILayout.IntField("Height:", height);
+			randomFillPercent = EditorGUILayout.IntSlider("Random Fill Percent:",randomFillPercent,0,100);
         }
         if (op == OPTIONS.TEST) {
             GUILayout.Label("Test stuff", EditorStyles.boldLabel);
@@ -92,13 +93,13 @@ public class Main : EditorWindow
 					Hauberk h = GameObject.Find (objectName).AddComponent<Hauberk> ();
 					h.addRooms (rooms);
 					h.setSeed (rnd);
-					h.setRandomSeed (useRandomSeed);
-					h.GenerateLevel(mapSize, level, tilePrefab);
+					h.setIsRandomSeed (useRandomSeed);
+					h.GenerateLevel(mapSize, level, tilePrefab, outlinePercent);
                     break;
                 case OPTIONS.Cave:
-                    Cave c = new Cave();
+					Cave c = GameObject.Find (objectName).AddComponent<Cave>();
                     c.setSeed(rnd);
-					c.setRandomSeed (useRandomSeed);
+					c.setIsRandomSeed (useRandomSeed);
                     c.GenerateLevel(level, randomFillPercent, width, height);
                     break;
                 case OPTIONS.TEST:
