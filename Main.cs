@@ -88,20 +88,24 @@ public class Main : EditorWindow
                 seed = Time.time.ToString();
             }
 			System.Random rnd = new System.Random (seed.GetHashCode());
+
+			ProgressBar window = new ProgressBar();
             switch (op){
 				case OPTIONS.Hauberk:
 					Hauberk h = GameObject.Find (objectName).AddComponent<Hauberk> ();
 					h.addRooms (rooms);
 					h.setSeed (rnd);
 					h.setIsRandomSeed (useRandomSeed);
+					h.setProgressBarWindow (window);
 					h.GenerateLevel(mapSize, level, tilePrefab, outlinePercent);
+					//window.myMethod = new ProgressBar.method(h.GenerateLevel(mapSize, level, tilePrefab, outlinePercent));
                     break;
                 case OPTIONS.Cave:
 					Cave c = GameObject.Find (objectName).AddComponent<Cave>();
                     c.setSeed(rnd);
 					c.setIsRandomSeed (useRandomSeed);
-                    c.GenerateLevel(level, randomFillPercent, width, height);
-                    break;
+                    //c.GenerateLevel(level, randomFillPercent, width, height);
+					break;
                 case OPTIONS.TEST:
                     Debug.Log("Testing...");
                     Debug.Log(System.IO.Directory.GetCurrentDirectory());

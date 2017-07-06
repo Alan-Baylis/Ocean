@@ -9,6 +9,7 @@ These instructions will get you a copy of the project up and running on your loc
 ### Prerequisites
 
 * Unity 5.4 or later
+* Progress Bar [LICENSE.md](https://github.com/kp16/Ocean/blob/master/LICENSE)
 
 ### Installing
 
